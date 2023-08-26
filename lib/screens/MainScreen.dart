@@ -136,7 +136,7 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     return SimplePage(
-      title: Text('Nebula'),
+      title: Text('Constellation'),
       scrollable: SimpleScrollable.vertical,
       scrollController: scrollController,
       leadingAction: PlatformIconButton(
@@ -188,7 +188,7 @@ class _MainScreenState extends State<MainScreen> {
             children: <Widget>[
               Padding(
                 padding: const EdgeInsets.fromLTRB(0, 8.0, 0, 8.0),
-                child: Text('Welcome to Nebula!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                child: Text('Welcome to Constellation!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
               ),
               Text('You don\'t have any site configurations installed yet. Hit the plus button above to get started.',
                   textAlign: TextAlign.center),

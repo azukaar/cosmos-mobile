@@ -9,8 +9,12 @@ import 'package:intl/intl.dart';
 import 'package:mobile_nebula/components/FormPage.dart';
 import 'package:mobile_nebula/components/PlatformTextFormField.dart';
 import 'package:mobile_nebula/components/config/ConfigPageItem.dart';
+import 'package:mobile_nebula/components/config/ConfigButtonItem.dart';
 import 'package:mobile_nebula/components/config/ConfigItem.dart';
 import 'package:mobile_nebula/components/config/ConfigSection.dart';
+import 'package:mobile_nebula/models/StaticHosts.dart';
+import 'package:mobile_nebula/models/IPAndPort.dart';
+import 'package:mobile_nebula/components/config/ConfigTextItem.dart';
 import 'package:mobile_nebula/models/Site.dart';
 import 'package:mobile_nebula/screens/siteConfig/AdvancedScreen.dart';
 import 'package:mobile_nebula/screens/siteConfig/CAListScreen.dart';
@@ -18,6 +22,8 @@ import 'package:mobile_nebula/screens/siteConfig/AddCertificateScreen.dart';
 import 'package:mobile_nebula/screens/siteConfig/CertificateDetailsScreen.dart';
 import 'package:mobile_nebula/screens/siteConfig/StaticHostsScreen.dart';
 import 'package:mobile_nebula/services/utils.dart';
+import 'package:mobile_nebula/models/Certificate.dart';
+import 'package:yaml/yaml.dart';
 
 //TODO: Add a config test mechanism
 //TODO: Enforce a name
@@ -48,6 +54,8 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
   late Site site;
   String? pubKey;
   String? privKey;
+  String inputType = 'qr';
+  final pasteController = TextEditingController();
 
   static const platform = MethodChannel('net.defined.mobileNebula/NebulaVpnService');
   final nameController = TextEditingController();
@@ -55,7 +63,7 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
   @override
   void initState() {
     //NOTE: this is slightly wasteful since a keypair will be generated every time this page is opened
-    _generateKeys();
+    // _generateKeys();
     if (widget.site == null) {
       newSite = true;
       site = Site();
@@ -68,14 +76,19 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
   }
 
   @override
+  void dispose() {
+    pasteController.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (pubKey == null || privKey == null) {
-      return Center(
-        child: fpw.PlatformCircularProgressIndicator(cupertino: (_, __) {
-          return fpw.CupertinoProgressIndicatorData(radius: 50);
-        }),
-      );
-    }
+    // if (pubKey == null || privKey == null) {
+    //   return Center(
+    //     child: fpw.PlatformCircularProgressIndicator(cupertino: (_, __) {
+    //       return fpw.CupertinoProgressIndicatorData(radius: 50);
+    //     }),
+    //   );
+    // }
 
     return FormPage(
         title: newSite ? 'New Site' : 'Edit Site',
@@ -94,10 +107,12 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
         child: Column(
           children: <Widget>[
             _main(),
-            _keys(),
-            _hosts(),
-            _advanced(),
-            _managed(),
+            _configuration(),
+            _addPaste(),
+            // _keys(),
+            // _hosts(),
+            // _advanced(),
+            // _managed(),
             kDebugMode ? _debugConfig() : Container(height: 0),
           ],
         ));
@@ -150,6 +165,148 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
         )
       ]
     ) : Container();
+  }
+
+  Widget _configuration() {
+    Map<String, Widget> children = {
+      // 'paste': Text('Copy/Paste'),
+      // 'file': Text('File'),
+    };
+
+    // not all devices have a camera for QR codes
+    if (widget.supportsQRScanning) {
+      children['qr'] = Text('QR Code');
+    } else if (inputType == 'qr') {
+      inputType = 'file';
+    }
+
+    children['file'] = Text('File');
+    children['paste'] = Text('Paste');
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(10, 25, 10, 0),
+      child: CupertinoSlidingSegmentedControl(
+        groupValue: inputType,
+        onValueChanged: (v) {
+          if (v != null) {
+            setState(() {
+              inputType = v;
+            });
+          }
+        },
+        children: children,
+      ));
+
+    // if (inputType == 'paste') {
+    //   items.addAll(_addPaste());
+    // } else if (inputType == 'file') {
+    //   items.addAll(_addFile());
+    // } else if (inputType == 'qr') {
+    //   items.addAll(_addQr());
+    // }
+  }
+
+  Future<CertificateInfo> _addCertEntry(String rawCert, String pubKey) async {
+    // Allow for app store review testing cert to override the generated key
+    // if (rawCert.trim() == _testCert) {
+    //   keyController.text = _testKey;
+    // }
+
+    try {
+      var rawCerts = await platform.invokeMethod("nebula.parseCerts", <String, String>{"certs": rawCert});
+
+      List<dynamic> certs = jsonDecode(rawCerts);
+      if (certs.length > 0) {
+        var tryCertInfo = CertificateInfo.fromJson(certs.first);
+        if (tryCertInfo.cert.details.isCa && pubKey != '') {
+          return Utils.popError(context, 'Error loading certificate content',
+              'A certificate authority is not appropriate for a client certificate.');
+        } else 
+        if (!tryCertInfo.validity!.valid) {
+          return Utils.popError(context, 'Certificate was invalid', tryCertInfo.validity!.reason);
+        }
+
+        if (pubKey != '') {
+          var certMatch = await platform
+              .invokeMethod("nebula.verifyCertAndKey", <String, String>{"cert": rawCert, "key": pubKey});
+          if (!certMatch) {
+            // The method above will throw if there is a mismatch, this is just here in case we introduce a bug in the future
+            return Utils.popError(context, 'Error loading certificate content',
+                'The provided certificates public key is not compatible with the private key.');
+          }
+        }
+
+        return tryCertInfo;
+      } else {
+        return Utils.popError(context, 'Error loading certificate content', "unknown");
+      }
+    } on PlatformException catch (err) {
+      return Utils.popError(context, 'Error loading certificate content', err.details ?? err.message);
+    }
+  }
+
+  _setConfiguration(String rawConfig) async {
+    final Map<String, dynamic> parsedConfig = json.decode(rawConfig);
+    final Map<String, dynamic> parsedNebulaConfig = json.decode(json.encode((loadYaml(parsedConfig['Config'] ?? ''))));
+
+    pubKey = parsedConfig['PublicKey'];
+    privKey = parsedConfig['PrivateKey'];
+
+    CertificateInfo certInfo = await _addCertEntry(privKey ?? '', pubKey ?? '');
+    CertificateInfo ca = await _addCertEntry(parsedConfig['CA'] ?? '', '');
+
+    // Site newSite = Site.fromYaml(parsedNebulaConfig);
+
+    // Map<String, StaticHost> staticHostMap = {};
+
+      // var map = Hostmap(
+      //     nebulaIp: _nebulaIp, destinations: [], lighthouse: _lighthouse);
+      
+      Map<String, dynamic> rawHostmap = parsedNebulaConfig['static_host_map'];
+      Map<String, StaticHost> staticHostmap = {};
+      rawHostmap.forEach((key, val) {
+        var result = <IPAndPort>[];
+
+        val.forEach((item) {
+          result.add(IPAndPort.fromString(item));
+        });
+
+        staticHostmap[key] = StaticHost(
+          lighthouse: true,
+          destinations: result,
+        );
+      });
+    
+
+    setState(() {
+      site.key = pubKey;
+      site.certInfo = certInfo;
+      site.ca = <CertificateInfo>[ca];
+
+      
+      site.staticHostmap = staticHostmap;
+
+      site.lhDuration = 60;
+      site.port = 4242;
+
+      changed = true;
+    });
+  }
+
+  Widget _addPaste() {
+    return ConfigSection(
+        children: [
+          ConfigTextItem(
+            placeholder: 'Constellation Config',
+            controller: pasteController,
+          ),
+          ConfigButtonItem(
+              content: Center(child: Text('Load Config')),
+              onPressed: () {
+                _setConfiguration(pasteController.text);
+              }),
+        ],
+      );
   }
 
   Widget _keys() {
