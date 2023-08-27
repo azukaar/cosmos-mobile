@@ -7,7 +7,7 @@ clean:
 
 mobileNebula.aar: *.go go.sum
 	go get -d golang.org/x/mobile/cmd/gomobile
-	gomobile bind -trimpath -v --target=android
+	gomobile bind -androidapi 19 -trimpath -v --target=android
 
 MobileNebula.xcframework: *.go go.sum
 	go get -d golang.org/x/mobile/cmd/gomobile

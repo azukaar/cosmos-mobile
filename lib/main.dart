@@ -98,7 +98,7 @@ class _AppState extends State<App> {
             DefaultWidgetsLocalizations.delegate,
             DefaultCupertinoLocalizations.delegate,
           ],
-          title: 'Nebula',
+          title: 'Cosmos - Constellation',
           material: (_, __) {
             return new MaterialAppData(
               themeMode: brightness == Brightness.light ? ThemeMode.light : ThemeMode.dark,

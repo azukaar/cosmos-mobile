@@ -1,7 +1,7 @@
 buildscript {
     ext {
         workVersion = "2.7.1"
-        kotlinVersion = '1.7.20'
+        kotlinVersion = '1.8.10'
     }
 
     repositories {
@@ -30,6 +30,6 @@ subprojects {
     project.evaluationDependsOn(':app')
 }
 
-task clean(type: Delete) {
+tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }

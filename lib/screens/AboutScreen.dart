@@ -61,19 +61,19 @@ class _AboutScreenState extends State<AboutScreen> {
               labelWidth: 150,
               content: _buildText(flutterVersion['dartSdkVersion'] ?? 'Unknown')),
         ]),
-        ConfigSection(children: <Widget>[
-          //TODO: wire up these other pages
-//          ConfigPageItem(label: Text('Changelog'), labelWidth: 300, onPressed: () => Utils.launchUrl('https://defined.net/mobile/changelog', context)),
-          ConfigPageItem(
-              label: Text('Privacy policy'),
-              labelWidth: 300,
-              onPressed: () => Utils.launchUrl('https://www.defined.net/privacy/', context)),
-//          ConfigPageItem(label: Text('Licenses'), labelWidth: 300, onPressed: () => Utils.launchUrl('https://defined.net/mobile/license', context)),
-        ]),
+//         ConfigSection(children: <Widget>[
+//           //TODO: wire up these other pages
+// //          ConfigPageItem(label: Text('Changelog'), labelWidth: 300, onPressed: () => Utils.launchUrl('https://defined.net/mobile/changelog', context)),
+//           ConfigPageItem(
+//               label: Text('Privacy policy'),
+//               labelWidth: 300,
+//               onPressed: () => Utils.launchUrl('https://www.defined.net/privacy/', context)),
+// //          ConfigPageItem(label: Text('Licenses'), labelWidth: 300, onPressed: () => Utils.launchUrl('https://defined.net/mobile/license', context)),
+//         ]),
         Padding(
             padding: EdgeInsets.only(top: 20),
             child: Text(
-              'Copyright © 2022 Defined Networking, Inc',
+              'Copyright © 2023 Yann Stepienik',
               textAlign: TextAlign.center,
             )),
       ]),

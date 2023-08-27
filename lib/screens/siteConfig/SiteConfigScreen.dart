@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart' as fpw;
 import 'package:intl/intl.dart';
 import 'package:mobile_nebula/components/FormPage.dart';
@@ -90,6 +91,22 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
     //   );
     // }
 
+    List<Widget> items = [
+      _main(),
+      _configuration(),
+    ];
+
+    if (inputType == 'paste') {
+      items.add(_addPaste());
+    } else if (inputType == 'file') {
+      items.addAll(_addFile());
+    } else if (inputType == 'qr') {
+      items.addAll(_addQr());
+    }
+
+    if(kDebugMode)
+      items.add(_debugConfig());
+    
     return FormPage(
         title: newSite ? 'New Site' : 'Edit Site',
         changed: changed,
@@ -105,16 +122,13 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
           widget.onSave(site);
         },
         child: Column(
-          children: <Widget>[
-            _main(),
-            _configuration(),
-            _addPaste(),
+          children: items// <Widget>[
+            // _addPaste(),
             // _keys(),
             // _hosts(),
             // _advanced(),
             // _managed(),
-            kDebugMode ? _debugConfig() : Container(height: 0),
-          ],
+          // ],
         ));
   }
 
@@ -169,8 +183,6 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
 
   Widget _configuration() {
     Map<String, Widget> children = {
-      // 'paste': Text('Copy/Paste'),
-      // 'file': Text('File'),
     };
 
     // not all devices have a camera for QR codes
@@ -307,6 +319,50 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
               }),
         ],
       );
+  }
+
+  List<Widget> _addFile() {
+    return [
+      ConfigSection(
+        children: [
+          ConfigButtonItem(
+              content: Center(child: Text('Choose a file')),
+              onPressed: () async {
+                try {
+                  final content = await Utils.pickFile(context);
+                  if (content == null) {
+                    return;
+                  }
+
+                  _setConfiguration(content);
+                } catch (err) {
+                  return Utils.popError(context, 'Failed to load constellation file', err.toString());
+                }
+              })
+        ],
+      )
+    ];
+  }
+
+  List<Widget> _addQr() {
+    return [
+      ConfigSection(
+        children: [
+          ConfigButtonItem(
+              content: Text('Scan a QR code'),
+              onPressed: () async {
+                try {
+                  var result = await FlutterBarcodeScanner.scanBarcode('#ff6666', 'Cancel', true, ScanMode.QR);
+                  if (result != "") {
+                    _setConfiguration(result);
+                  }
+                } catch (err) {
+                  return Utils.popError(context, 'Error scanning QR code', err.toString());
+                }
+              }),
+        ],
+      )
+    ];
   }
 
   Widget _keys() {
