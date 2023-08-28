@@ -8,6 +8,7 @@ import 'package:mobile_nebula/models/UnsafeRoute.dart';
 import 'package:uuid/uuid.dart';
 import 'Certificate.dart';
 import 'StaticHosts.dart';
+import 'IPAndPort.dart';
 
 var uuid = Uuid();
 
@@ -245,29 +246,35 @@ class Site {
     var port = parts.length > 1 ? parts[1] : null;
 
     // Resolve the hostname to its IP address
-    var lookup = await InternetAddress.lookup(hostname);
-    var ipAddress = ipList.first.address; // Using the first IP. You might want to add error handling or choose IPv4/IPv6 specifically.
+    // try {
+      var lookup = await InternetAddress.lookup(hostname);
+      var ipAddress = lookup.first.address; // Using the first IP. You might want to add error handling or choose IPv4/IPv6 specifically.
+      return port != null ? '$ipAddress:$port' : ipAddress;
+    // } catch (err) {
+    //   return "";
+    // }
 
-    return port != null ? '$ipAddress:$port' : ipAddress;
   }
 
   save() async {
     try {
-      var tempSite = Site.copy(this);
-
       // Iterate over entries and update them
-      for (var key in tempSite.staticHostmap.keys.toList()) {
-        var domains = tempSite.staticHostmap[key] ?? [];
-        for (var i = 0; i < domains.length; i++) {
-          var domain = domains[i];
+      for (var key in staticHostmap.keys.toList()) {
+        var domains = staticHostmap[key]?.destinations ?? [];
+        if(domains.length > 1) {
+          var domain = domains[1].toString();
           var resolvedIP = await replaceHostWithIp(domain);
-          if (resolvedIP!= null && resolvedIP != domain && !domains.contains(resolvedIP)) 
-            domains.add(resolvedIP);  // Add resolved IP to the list of domains for the given IP key
+          if (resolvedIP != null && resolvedIP != domain && !domains.contains(resolvedIP)) {
+            if(domains.length > 2) {
+              domains[2] = IPAndPort.fromString(resolvedIP);
+            } else {
+              domains.add(IPAndPort.fromString(resolvedIP));  // Add resolved IP to the list of domains for the given IP key
+            }
           }
         }
       }
 
-      var raw = jsonEncode(tempSite);
+      var raw = jsonEncode(this);
       await platform.invokeMethod("saveSite", raw);
     } on PlatformException catch (err) {
       //TODO: fix this message
