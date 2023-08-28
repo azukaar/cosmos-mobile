@@ -131,6 +131,8 @@ class NebulaVpnService : VpnService() {
             builder.addRoute(unsafeIPNet.network, unsafeIPNet.maskSize.toInt())
         }
 
+        builder.addDnsServer("192.168.201.1")
+
         try {
             vpnInterface = builder.establish()
             nebula = mobileNebula.MobileNebula.newNebula(site!!.config, site!!.getKey(this), site!!.logFile, vpnInterface!!.detachFd().toLong())

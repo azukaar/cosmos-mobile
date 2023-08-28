@@ -79,6 +79,7 @@ class _SiteConfigScreenState extends State<SiteConfigScreen> {
   @override
   void dispose() {
     pasteController.dispose();
+    super.dispose();
   }
 
   @override

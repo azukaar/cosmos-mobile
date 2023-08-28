@@ -78,6 +78,9 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         tunnelNetworkSettings.ipv4Settings!.includedRoutes = routes
         tunnelNetworkSettings.mtu = _site.mtu as NSNumber
+        
+        let dnsSettings = NEDNSSettings(servers: "192.168.201.1")
+        tunnelNetworkSettings.dnsSettings = dnsSettings
 
         self.setTunnelNetworkSettings(tunnelNetworkSettings, completionHandler: {(error:Error?) in
             if (error != nil) {
