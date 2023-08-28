@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:mobile_nebula/models/HostInfo.dart';
@@ -7,8 +8,6 @@ import 'package:mobile_nebula/models/UnsafeRoute.dart';
 import 'package:uuid/uuid.dart';
 import 'Certificate.dart';
 import 'StaticHosts.dart';
-import 'package:dns/dns.dart';
-
 
 var uuid = Uuid();
 
@@ -246,8 +245,8 @@ class Site {
     var port = parts.length > 1 ? parts[1] : null;
 
     // Resolve the hostname to its IP address
-    var lookup = await Dns.lookup(hostname);
-    var ipAddress = lookup.first.ip; // Using the first IP. You might want to add error handling or choose IPv4/IPv6 specifically.
+    var lookup = await InternetAddress.lookup(hostname);
+    var ipAddress = ipList.first.address; // Using the first IP. You might want to add error handling or choose IPv4/IPv6 specifically.
 
     return port != null ? '$ipAddress:$port' : ipAddress;
   }
