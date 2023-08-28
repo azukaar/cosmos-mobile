@@ -7,6 +7,8 @@ import 'package:mobile_nebula/models/UnsafeRoute.dart';
 import 'package:uuid/uuid.dart';
 import 'Certificate.dart';
 import 'StaticHosts.dart';
+import 'package:dns/dns.dart';
+
 
 var uuid = Uuid();
 
@@ -237,9 +239,36 @@ class Site {
     };
   }
 
+  Future<String> replaceHostWithIp(String value) async {
+    // Extract the hostname
+    var parts = value.split(':');
+    var hostname = parts[0];
+    var port = parts.length > 1 ? parts[1] : null;
+
+    // Resolve the hostname to its IP address
+    var lookup = await Dns.lookup(hostname);
+    var ipAddress = lookup.first.ip; // Using the first IP. You might want to add error handling or choose IPv4/IPv6 specifically.
+
+    return port != null ? '$ipAddress:$port' : ipAddress;
+  }
+
   save() async {
     try {
-      var raw = jsonEncode(this);
+      var tempSite = Site.copy(this);
+
+      // Iterate over entries and update them
+      for (var key in tempSite.staticHostmap.keys.toList()) {
+        var domains = tempSite.staticHostmap[key] ?? [];
+        for (var i = 0; i < domains.length; i++) {
+          var domain = domains[i];
+          var resolvedIP = await replaceHostWithIp(domain);
+          if (resolvedIP!= null && resolvedIP != domain && !domains.contains(resolvedIP)) 
+            domains.add(resolvedIP);  // Add resolved IP to the list of domains for the given IP key
+          }
+        }
+      }
+
+      var raw = jsonEncode(tempSite);
       await platform.invokeMethod("saveSite", raw);
     } on PlatformException catch (err) {
       //TODO: fix this message
@@ -263,6 +292,7 @@ class Site {
 
   start() async {
     try {
+      await save();
       await platform.invokeMethod("startSite", <String, String>{"id": id});
     } on PlatformException catch (err) {
       throw err.message ?? err.toString();
